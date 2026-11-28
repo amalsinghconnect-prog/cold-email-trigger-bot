@@ -13,31 +13,30 @@ creds_dict = json.loads(os.environ["GCP_SERVICE_ACCOUNT_JSON"])
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 sheet = gspread.authorize(creds).open("Cold_Email_Bot_2026").worksheet("Leads")
 
-# 2. Multiple Targeted Trigger Feeds (Hiring + Deal Wins in India)
+# 2. Refined B2B Trigger Feeds (Excludes movies/tickets/real estate noise)
 feeds = [
-    ("Hiring_Trigger", "https://news.google.com/rss/search?q=(%22Bid+Manager%22+OR+%22Pre-Sales%22+OR+%22Presales%22)+AND+(%22hiring%22+OR+%22Bengaluru%22+OR+%22India%22)+when:14d&hl=en-IN&gl=IN&ceid=IN:en"),
+    ("Hiring_Trigger", "https://news.google.com/rss/search?q=(%22Bid+Manager%22+OR+%22Bid+Management%22+OR+%22RFP%22+OR+%22Solutions+Architect%22)+AND+(%22IT%22+OR+%22cloud%22+OR+%22consulting%22)+AND+%22India%22+-ticket+-movie+-box+when:14d&hl=en-IN&gl=IN&ceid=IN:en"),
     ("Deal_Win_Trigger", "https://news.google.com/rss/search?q=(%22IT+services%22+OR+%22digital+transformation%22+OR+%22cloud%22)+AND+(%22wins+deal%22+OR+%22multi-year+contract%22+OR+%22partnership%22)+AND+%22India%22+when:14d&hl=en-IN&gl=IN&ceid=IN:en"),
-    ("Consulting_Expansion", "https://news.google.com/rss/search?q=(%22consulting%22+OR+%22BFSI%22+OR+%22enterprise+solutions%22)+AND+(%22expansion%22+OR+%22new+office%22+OR+%22leadership%22)+AND+%22Bengaluru%22+when:14d&hl=en-IN&gl=IN&ceid=IN:en")
+    ("Consulting_Expansion", "https://news.google.com/rss/search?q=(%22consulting%22+OR+%22GCC%22+OR+%22delivery+centre%22)+AND+(%22expansion%22+OR+%22Bengaluru%22+OR+%22leadership%22)+AND+%22India%22+when:14d&hl=en-IN&gl=IN&ceid=IN:en")
 ]
 
-existing_triggers = sheet.col_values(5)  # Deduplicate using Column E (Trigger_Detail)
+existing_triggers = sheet.col_values(5)  # Deduplicate via Column E
 
 for trigger_type, url in feeds:
     feed = feedparser.parse(url)
     for entry in feed.entries[:15]:
-        # Strip the news publisher name off the end so only the clean headline remains
         clean_headline = entry.title.rsplit(" - ", 1)[0]
         trigger_text = f"{clean_headline} ({entry.link})"
         
         if trigger_text not in existing_triggers:
             sheet.append_row([
-                "",               # Col A: First_Name (you fill after checking LinkedIn)
-                "",               # Col B: Email (you fill)
-                "Check Headline", # Col C: Company (replace with target company name)
+                "",               # Col A: First_Name
+                "",               # Col B: Email
+                "Check Headline", # Col C: Company
                 trigger_type,     # Col D: Trigger_Type
-                trigger_text,     # Col E: Trigger_Detail + Article Link
+                trigger_text,     # Col E: Trigger_Detail
                 "A",              # Col F: AB_Variant
-                "", "", "",       # Col G-I: AI-generated Subject & Emails
+                "", "", "",       # Col G-I: Subject, Email 1, Email 2
                 "NEEDS_ENRICHMENT",
                 ""
             ])
